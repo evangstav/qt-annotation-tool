@@ -123,6 +123,8 @@ class UNetClassifier(nn.Module):
 
     Ref. O. Ronneberger et al. "U-net: Convolutional networks for biomedical
     image segmentation."
+
+    Added a classification head
     """
 
     def __init__(self, filters: int = 64, input_filters: int = 3, **kwargs):

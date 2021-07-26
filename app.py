@@ -20,13 +20,13 @@ from PyQt5.QtWidgets import (
 )
 
 import torch
-
-sys.path.append("../")
 from models.models import UNet
 
-MODEL_PATH = "trained_models/segmentation_mixed_augmented_UNet_1604044090.034343.pth"
+sys.path.append("../")
 
-def load_model(path):
+MODEL_PATH: str = "trained_models/segmentation_mixed_augmented_UNet_1604044090.034343.pth"
+
+def load_model(path: str):
     # load model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = UNet(input_filters=1, filters=64, N=2).to(device)
@@ -37,8 +37,8 @@ def load_model(path):
 
 
 # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-IMAGE_WIDTH = 2048 // 2
-IMAGE_HEIGHT = 1536 // 2
+IMAGE_WIDTH: int = 2048 // 2
+IMAGE_HEIGHT: int = 1536 // 2
 
 BOUNDARY_COLOR = (0, 255, 0)
 CENTER_COLOR = (255, 255, 255)
@@ -159,6 +159,9 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def remove_labelled_files(files, dest_dir):
+        """
+        Function that the unlabelled files by checking the correpsonding .npy labels
+        """
         labelled_files = [
             os.path.basename(os.path.splitext(lf)[0])
             for lf in glob.glob(os.path.join(dest_dir, "*.npy"))
@@ -171,12 +174,16 @@ class MainWindow(QMainWindow):
 
 
 class Image:
+    """
+    Image class containing the raw image, and the circle detection algorithm and logic
+    """
     def __init__(self, file_path, model):
         self.file_path = file_path
         self.image = cv2.imread(self.file_path, 0)
         self.model = model
         self.circles = self.detect_circles()
         self.radius = 30
+        self.threshold = 0.5
 
     def detect_circles(self):
         # resize image
@@ -187,13 +194,12 @@ class Image:
         )
         # predict with model
         prediction = self.model(tensor_image)[0, 0].cpu().detach().numpy() > 0.5
-        # get centers from resized mask
+        
         # resize prediction to original size
-
         resized_prediction = cv2.resize(prediction.astype(np.uint8) * 255, (2048, 1536))
 
         # find centers
-        contours, hierarchy = cv2.findContours(resized_prediction, 1, 2)
+        contours, _ = cv2.findContours(resized_prediction, 1, 2)
 
         def find_center(contour):
             M = cv2.moments(contour)
@@ -206,12 +212,11 @@ class Image:
         return np.array(circles)
 
     def overlay_circles_on_top(self, alpha=0.5):
-
         circles = np.uint16(np.around(self.circles))
         img_over_lay = self.image.copy()
         img_over_lay = np.stack((img_over_lay,) * 3, axis=-1)
 
-        for no, i in enumerate(circles):
+        for _, i in enumerate(circles):
             img_over_lay = cv2.circle(
                 img_over_lay, (i[0], i[1]), 30, BOUNDARY_COLOR, 10
             )
